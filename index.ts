@@ -2,7 +2,7 @@ import { config } from "dotenv";
 config();
 
 import { createServer, IncomingMessage } from "http";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { exec } from "child_process";
 
 if (!(process.env.SECRET && process.env.SCRIPT_PATH && process.env.PORT)) {
@@ -14,6 +14,10 @@ if (!(process.env.SECRET && process.env.SCRIPT_PATH && process.env.PORT)) {
 const secret = process.env.SECRET!;
 const scriptPath = process.env.SCRIPT_PATH!;
 const port = process.env.PORT!;
+
+function safeCompareHashStrings(left: string, right: string) {
+  return timingSafeEqual(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+}
 
 export function readFullBody(request: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -53,13 +57,19 @@ export function runScript(pathToScript: string): Promise<void> {
 const server = createServer(async (req, res) => {
   const { headers } = req;
   const body = await readFullBody(req);
-
-  const githubPayloadHash = headers["X-Hub-Signature"];
   const requestPayloadHash = bodyHash(body, secret);
 
   const hookEvent = headers["X-Github-Event"];
 
-  if (githubPayloadHash !== requestPayloadHash) {
+  if (!headers["X-Hub-Signature"]) {
+    res.statusCode = 500;
+    res.write("No signature provided");
+    return res.end();
+  }
+
+  const githubPayloadHash = headers["X-Hub-Signature"] as string;
+
+  if (safeCompareHashStrings(githubPayloadHash, requestPayloadHash)) {
     res.statusCode = 500;
     res.write("Signatures don't match");
     return res.end();
