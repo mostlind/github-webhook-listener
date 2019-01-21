@@ -59,29 +59,33 @@ const server = createServer(async (req, res) => {
 
   const hookEvent = headers["X-Github-Event"];
 
-  if (hookEvent !== "push") {
-    res.statusCode = 500;
-    res.write("Only responds to push events");
-    return res.end();
-  }
-
   if (githubPayloadHash !== requestPayloadHash) {
     res.statusCode = 500;
     res.write("Signatures don't match");
     return res.end();
   }
 
-  try {
-    await runScript(scriptPath);
-  } catch (err) {
-    res.statusCode = 500;
-    res.write("script failed");
-    return res.end();
+  switch (hookEvent) {
+    case "push":
+      try {
+        await runScript(scriptPath);
+      } catch (err) {
+        res.statusCode = 500;
+        res.write("script failed");
+        return res.end();
+      }
+      res.statusCode = 200;
+      res.write("success");
+      return res.end();
+    case "ping":
+      res.statusCode = 200;
+      res.write("pong");
+      return res.end();
+    default:
+      res.statusCode = 500;
+      res.write("Only responds to push events");
+      return res.end();
   }
-
-  res.statusCode = 200;
-  res.write("success");
-  return res.end();
 });
 
 server.listen(port);
