@@ -59,15 +59,15 @@ const server = createServer(async (req, res) => {
   const body = await readFullBody(req);
   const requestPayloadHash = bodyHash(body, secret);
 
-  const hookEvent = headers["X-Github-Event"];
+  const hookEvent = headers["x-github-event"];
 
-  if (!headers["X-Hub-Signature"]) {
+  if (!headers["x-hub-signature"]) {
     res.statusCode = 500;
     res.write("No signature provided");
     return res.end();
   }
 
-  const githubPayloadHash = headers["X-Hub-Signature"] as string;
+  const githubPayloadHash = headers["x-hub-signature"] as string;
 
   if (safeCompareHashStrings(githubPayloadHash, requestPayloadHash)) {
     res.statusCode = 500;
