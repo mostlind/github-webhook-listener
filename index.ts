@@ -69,7 +69,7 @@ const server = createServer(async (req, res) => {
 
   const githubPayloadHash = headers["x-hub-signature"] as string;
 
-  if (safeCompareHashStrings(githubPayloadHash, requestPayloadHash)) {
+  if (!safeCompareHashStrings(githubPayloadHash, requestPayloadHash)) {
     res.statusCode = 500;
     res.write("Signatures don't match");
     return res.end();
